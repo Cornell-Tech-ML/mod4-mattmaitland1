@@ -35,8 +35,55 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     kh, kw = kernel
     assert height % kh == 0
     assert width % kw == 0
-    # TODO: Implement for Task 4.3.
-    raise NotImplementedError("Need to implement for Task 4.3")
+    
+    # Calculate new dimensions
+    new_height = height // kh
+    new_width = width // kw
+    
+    # Make input contiguous before view operation
+    input = input.contiguous()
+    
+    # Create a view of the input tensor with the tiled structure
+    tiled = input.view(
+        batch, 
+        channel,
+        new_height,  # Number of vertical tiles
+        kh,         # Height of each tile
+        new_width,  # Number of horizontal tiles
+        kw          # Width of each tile
+    )
+    
+    # Permute to get the kernel dimensions at the end
+    tiled = tiled.permute(0, 1, 2, 4, 3, 5)
+    
+    # Make contiguous again after permute
+    tiled = tiled.contiguous()
+    
+    # Combine the kernel dimensions
+    tiled = tiled.view(batch, channel, new_height, new_width, kh * kw)
+    
+    return tiled, new_height, new_width
 
 
 # TODO: Implement for Task 4.3.
+def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Tiled average pooling 2D.
+
+    Args:
+        input : batch x channel x height x width
+        kernel : height x width of pooling
+
+    Returns:
+        Pooled tensor
+    """
+    batch, channel, height, width = input.shape
+    kh, kw = kernel
+    
+    # Use the tile function to reshape
+    tiled, new_height, new_width = tile(input, kernel)
+    
+    # Average over the last dimension (which contains the kernel values)
+    pooled = tiled.mean(4)
+    
+    # Ensure correct output shape
+    return pooled.view(batch, channel, new_height, new_width)
