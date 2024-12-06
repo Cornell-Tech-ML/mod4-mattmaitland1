@@ -1,14 +1,11 @@
 from typing import Tuple, TypeVar, Any
 
-import numpy as np
 from numba import prange
 from numba import njit as _njit
 
 from .autodiff import Context
 from .tensor import Tensor
 from .tensor_data import (
-    MAX_DIMS,
-    Index,
     Shape,
     Strides,
     Storage,
@@ -22,6 +19,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Numba njit decorator."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -117,15 +115,9 @@ def _tensor_conv1d(
 
                 # Calculate input and weight indices
                 input_idx = (
-                    out_batch * s1[0] +
-                    in_channel * s1[1] +
-                    in_width_pos * s1[2]
+                    out_batch * s1[0] + in_channel * s1[1] + in_width_pos * s1[2]
                 )
-                weight_idx = (
-                    out_channel * s2[0] +
-                    in_channel * s2[1] +
-                    w_pos * s2[2]
-                )
+                weight_idx = out_channel * s2[0] + in_channel * s2[1] + w_pos * s2[2]
 
                 # Accumulate product
                 acc += input[input_idx] * weight[weight_idx]
@@ -167,6 +159,7 @@ class Conv1dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute the backward pass of a 1D Convolution."""
         input, weight = ctx.saved_values
         batch, in_channels, w = input.shape
         out_channels, in_channels, kw = weight.shape
@@ -253,22 +246,15 @@ def _tensor_conv2d(
                         in_w = out_w - kw + k_w + 1
 
                     # Skip if outside input bounds
-                    if (in_h < 0 or in_h >= height or 
-                        in_w < 0 or in_w >= width):
+                    if in_h < 0 or in_h >= height or in_w < 0 or in_w >= width:
                         continue
 
                     # Calculate input and weight indices
                     input_idx = (
-                        out_batch * s10 +
-                        in_channel * s11 +
-                        in_h * s12 +
-                        in_w * s13
+                        out_batch * s10 + in_channel * s11 + in_h * s12 + in_w * s13
                     )
                     weight_idx = (
-                        out_channel * s20 +
-                        in_channel * s21 +
-                        k_h * s22 +
-                        k_w * s23
+                        out_channel * s20 + in_channel * s21 + k_h * s22 + k_w * s23
                     )
 
                     # Accumulate product
@@ -309,6 +295,7 @@ class Conv2dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute the backward pass of a 2D Convolution."""
         input, weight = ctx.saved_values
         batch, in_channels, h, w = input.shape
         out_channels, in_channels, kh, kw = weight.shape

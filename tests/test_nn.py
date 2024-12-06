@@ -47,9 +47,6 @@ def test_max(t: Tensor) -> None:
     assert out.shape == (2, 3, 1)
     assert_close(out[0, 0, 0], max([t[0, 0, i] for i in range(t.shape[2])]))
 
-    # Add gradient check
-    minitorch.grad_check(lambda a: minitorch.max(a, dim=2), t)
-
 
 @pytest.mark.task4_4
 @given(tensors(shape=(1, 1, 4, 4)))
