@@ -105,28 +105,34 @@ class Scalar:
         assert self.is_leaf(), "Only leaf variables can have derivatives."
         if self.derivative is None:
             self.__setattr__("derivative", 0.0)
-        self.__setattr__("derivative", self.derivative + x)
+        self.__setattr__(
+            "derivative", self.derivative + x
+        )  # this line wouldnt work for me
+        # self.derivative += x
 
     def is_leaf(self) -> bool:
         """True if this variable created by the user (no `last_fn`)"""
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """True if this variable was created by an operation on constants."""
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Returns the parents of this variable."""
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Returns the partial derivatives of this variable with respect to its parents."""
         h = self.history
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        x = h.last_fn._backward(h.ctx, d_output)
+        return list(zip(h.inputs, x))
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,7 +147,39 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        return LT.apply(b, self)
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, -b)
+
+    def __neg__(self) -> Scalar:
+        return Neg.apply(self)
+
+    def __add__(self, b: ScalarLike) -> Scalar:
+        return Add.apply(self, b)
+
+    def __eq__(self, b: ScalarLike) -> Scalar:  # type: ignore[override]
+        return EQ.apply(b, self)
+
+    def log(self) -> Scalar:
+        """Returns the  logarithm of the current scalar."""
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Returns the exponential of the current scalar."""
+        return Exp.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Returns the sigmoid of the current scalar."""
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Scalar:
+        """Returns the ReLU of the current scalar."""
+        return ReLU.apply(self)
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
@@ -150,8 +188,20 @@ def derivative_check(f: Any, *scalars: Scalar) -> None:
 
     Parameters
     ----------
-        f : function from n-scalars to 1-scalar.
-        *scalars  : n input scalar values.
+    f : Any
+        Function from n-scalars to 1-scalar.
+    *scalars : Scalar
+        n input scalar values.
+
+    Returns
+    -------
+    None
+        This function doesn't return anything but raises an AssertionError if the derivative check fails.
+
+    Raises
+    ------
+        AssertionError
+        If the computed derivative doesn't match the expected derivative from central difference.
 
     """
     out = f(*scalars)
