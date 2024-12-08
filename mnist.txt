@@ -1,3 +1,5 @@
+Terminal output got truncated. Here is what I was able to copy over (starting at epoch 10)
+
 Epoch 10 loss 1.1468878504209052 valid acc 16/16
 Epoch 10 loss 0.3076607015132846 valid acc 14/16
 Epoch 10 loss 0.7641411952419976 valid acc 15/16
